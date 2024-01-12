@@ -1,0 +1,15 @@
+---
+title: "Plik z apka"
+output: html_document
+date: "2024-01-09"
+---
+```{r}
+#library(rsconnect)
+```
+```{r}
+#rsconnect::setAccountInfo(name='omx0cd-weronika-koz0owska', token='20931996BD2570C00C1F99B788325BFC', #secret='Rl`vxjQJAU3W583e1n3AMN/ZQ+oaZlsJRkQmihMOl')
+```
+```{r}
+#library(rsconnect)
+#rsconnect::deployApp("C:/Users/Weronika/Desktop/SEM3/inz/apka.RMD")
+``` 

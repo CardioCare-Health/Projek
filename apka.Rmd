@@ -1,0 +1,146 @@
+---
+title: "APKA"
+output: html_document
+date: "2024-01-07"
+---
+```{r}
+# app.R
+
+library(shiny)
+```
+
+
+###Aplikacja (Stworzenie )
+
+#Import danych
+
+```{r}
+heart <- read.csv("heart1.csv")
+```
+
+
+
+```{r}
+#zmiana typu zmiennych 
+heart$Sex <- factor(heart$Sex)
+heart$ExerciseAngina <- factor(heart$ExerciseAngina)
+heart$HeartDisease <- factor(heart$HeartDisease)
+ 
+heart$MaxHR <- as.numeric(heart$MaxHR)
+heart$Cholesterol <- as.numeric(heart$Cholesterol)
+heart$RestingBP <- as.numeric(heart$RestingBP)
+heart$Age <- as.numeric(heart$Age)
+heart$Sex <-as.character(heart$Sex)
+
+```
+
+
+```{r}
+#Wstępna weryfikacja poprawności danych
+ 
+#Ze zbioru danych usuniemy dane, z któych nie będziemy korzystać w badaniu.
+ 
+#summary(heart)
+heart[heart$Cholesterol == 0, ]
+nrow(heart[heart$Cholesterol == 0, ])
+heart[heart$RestingBP == 0, ]
+nrow(heart) - nrow(heart[heart$Cholesterol == 0, ])
+heart_1= heart
+```
+```{r}
+#Usunięcie jednostek
+heart_2 = heart_1[heart_1$Cholesterol > 0,]
+```
+
+```{r}
+#Podział zbioru na uczący i testowy**
+set.seed(1257) #set.seed(NULL) --> usunięcie "ziarna"
+n <- nrow(heart_2) #zlicza wiersze
+liczby_losowe <- sample(c(1:n), round(0.7*n), replace = FALSE) #replace-losowanie bez powtarzania
+heart_uczacy <- heart_2[liczby_losowe,]
+heart_testowy <- heart_2[-liczby_losowe,]
+
+```
+
+```{r}
+logit8 <- glm(HeartDisease ~ Age + MaxHR + Sex + ExerciseAngina, data = heart_uczacy, family = binomial)
+```
+
+#Wyświetlanie i wprowadzanie danych 
+
+
+```{r}
+predict_disease <- function(Age, Sex, MaxHR, ExerciseAngina) {
+  input_data <- data.frame(Age = as.numeric(Age),
+                            Sex = as.character(Sex),
+                            MaxHR = as.numeric(MaxHR),
+                            ExerciseAngina = as.character(ExerciseAngina))
+  
+  prediction <- predict(logit8, input_data)
+  prediction<- (exp(prediction)/(exp(prediction)+1))*100
+  return(prediction)
+}
+
+#Interfejs
+ui <- fluidPage(
+  titlePanel("Model Predictions"),
+  sidebarLayout(
+    sidebarPanel(
+      numericInput("Age", "Age(Only integer positive number):", value = 70),
+      selectInput("Sex", "Gender (M - Male, F - Female):", choices = c("M", "F"), selected = "M"),
+      numericInput("MaxHR", "MaxHR (Achievable maximum heart rate per minute):", value = 200),
+      selectInput("ExerciseAngina", "ExerciseAngina (Occurrence of angina Y - Yes,\n N - No):", choices = c("N", "Y"), selected = "N"),
+      actionButton("predictButton", "Predict")
+    ),
+    mainPanel(
+      h3("Prediction Result:"),
+      verbatimTextOutput("predictionResult") 
+    )
+  )
+)
+
+
+
+server <- function(input, output) {
+  observeEvent(input$predictButton, {
+    if (!is.numeric(input$Age)) {
+      output$predictionResult <- renderPrint({
+        "Błędnie wprowadzony znak (wprowadź poprawny wiek, liczba większa od 0)"
+      })
+      return()
+    }
+    if (input$Age < 20 || input$Age > 100) {
+      output$predictionResult <- renderPrint({
+        "Wprowadź poprawny wiek (liczba z przedziału od 20 do 100)"
+      })
+      return()
+    }
+    if (!is.numeric(input$MaxHR)) {
+      output$predictionResult <- renderPrint({
+        "Błędnie wprowadzony znak (liczba z przedziału od 40 do 250)"
+      })
+      return()
+    }
+    if (input$MaxHR < 40 || input$MaxHR > 250) {
+      output$predictionResult <- renderPrint({
+        "Wprowadź poprawne maksymalne tętno (liczba z przedziału od 40 do 250)"
+      })
+      return()
+    }
+
+    # Poprawnie wprowadzone dane 
+    prediction <- predict_disease(input$Age, input$Sex, input$MaxHR, input$ExerciseAngina)
+    output$predictionResult <- renderPrint({
+      paste("Prediction:", prediction)
+    })
+  })
+}
+
+```
+
+
+
+```{r}
+# Uruchomienie aplikacji Shiny
+shinyApp(ui = ui, server = server)
+```
